@@ -1,0 +1,31 @@
+#cloud-config
+packages:
+  - git
+  - golang
+runcmd:
+  - sudo yum update
+  - echo "Task Initiated" > /tmp/init.log
+  - cd /home/ec2-user
+  - pwd >> /tmp/init.log
+  - sudo yum update
+  - sudo pip3 install boto3 >> /tmp/init.log
+  - echo "Installing GoPhish" >> /tmp/init.log
+  - git clone git://github.com/gophish/gophish 
+  - cd ./gophish
+  - sudo go build
+  - sed -i 's/127.0.0.1/0.0.0.0/g' config.json  >> /tmp/init.log
+  - echo "GOPHISH_INITIAL_ADMIN_PASSWORD=gophish" | sudo tee /etc/environment
+  - echo "[Unit]" > /etc/systemd/system/gophish.service
+  - echo "Description=GoPhish C2 Service" >> /etc/systemd/system/gophish.service 
+  - echo "" >> /etc/systemd/system/gophish.service 
+  - echo "[Service]" >> /etc/systemd/system/gophish.service 
+  - echo "User=root" >> /etc/systemd/system/gophish.service 
+  - echo "WorkingDirectory=/home/ec2-user/gophish" >> /etc/systemd/system/gophish.service 
+  - echo "ExecStart=/home/ec2-user/gophish/gophish" >> /etc/systemd/system/gophish.service 
+  - echo "" >> /etc/systemd/system/gophish.service 
+  - echo "[Install]" >> /etc/systemd/system/gophish.service 
+  - echo "WantedBy=multi-user.target" >> /etc/systemd/system/gophish.service 
+  - systemctl daemon-reload
+  - systemctl start gophish
+  - systemctl enable gophish
+  - sudo ./gophish &

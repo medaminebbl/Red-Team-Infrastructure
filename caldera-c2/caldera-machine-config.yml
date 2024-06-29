@@ -1,0 +1,100 @@
+#cloud-config
+packages:
+  - python3
+  - git
+  - haproxy
+runcmd:
+  - echo "Task Initiated" > /tmp/init.log
+  - cd /home/ec2-user
+  - pwd >> /tmp/init.log
+  - sudo yum update
+  - sudo pip3 install boto3 >> /tmp/init.log
+  - git clone https://github.com/mitre/caldera.git --recursive --branch 3.1.0 >> /tmp/init.log
+  - chmod -R 7777 caldera >> /tmp/init.log
+  - cd caldera >> /tmp/init.log
+  - pip3 install -r requirements.txt >> /tmp/init.log
+  - pip3 install marshmallow-enum==1.5.1 >> /tmp/init.log
+  - pip3 install ldap3==2.7 >> /tmp/init.log
+  - echo "Done" >> /tmp/init.log 
+  - python3 server.py &
+  - sleep 30
+  - echo "[Unit]" > /etc/systemd/system/caldera.service
+  - echo "Description=Caldera C2 Service" >> /etc/systemd/system/caldera.service 
+  - echo "" >> /etc/systemd/system/caldera.service 
+  - echo "[Service]" >> /etc/systemd/system/caldera.service 
+  - echo "User=ec2-user" >> /etc/systemd/system/caldera.service 
+  - echo "WorkingDirectory=/home/ec2-user/caldera" >> /etc/systemd/system/caldera.service 
+  - echo "ExecStart=/usr/bin/python3 /home/ec2-user/caldera/server.py" >> /etc/systemd/system/caldera.service 
+  - echo "" >> /etc/systemd/system/caldera.service 
+  - echo "[Install]" >> /etc/systemd/system/caldera.service 
+  - echo "WantedBy=multi-user.target" >> /etc/systemd/system/caldera.service 
+  - systemctl daemon-reload
+  - systemctl start caldera
+  - systemctl enable caldera
+  - cat conf/local.yml | grep  -oP '^\s+red:\s(?<Password>[\w\d_\-]+)' > /tmp/password
+
+
+#!/bin/bash
+
+# Installer les paquets requis
+apt-get update -y
+apt-get install -y python3 git haproxy python3-pip
+
+# Initialiser le journal
+echo "Task Initiated" > /tmp/init.log
+
+# Se déplacer dans le répertoire home de l'utilisateur root
+
+pwd >> /tmp/init.log
+
+# Mettre à jour le système
+apt-get upgrade -y
+
+# Installer boto3 via pip
+pip3 install boto3 --break-system-packages >> /tmp/init.log
+
+# Cloner le dépôt Caldera
+git clone https://github.com/mitre/caldera.git --recursive --branch 3.1.0 >> /tmp/init.log
+
+# Modifier les permissions du répertoire Caldera
+chmod -R 7777 caldera >> /tmp/init.log
+
+# Se déplacer dans le répertoire Caldera
+cd caldera >> /tmp/init.log
+
+# Installer les dépendances Python
+pip3 install -r requirements.txt --break-system-packages >> /tmp/init.log
+pip3 install marshmallow-enum==1.5.1 --break-system-packages  >> /tmp/init.log
+pip3 install ldap3==2.7 --break-system-packages >> /tmp/init.log
+pip3 install rc4 --break-system-packages >> /tmp/init.log
+pip3 install b64 --break-system-packages >> /tmp/init.log
+# Marquer la fin de l'installation
+echo "Done" >> /tmp/init.log 
+
+# Démarrer le serveur Caldera en arrière-plan
+python3 server.py &
+
+# Attendre 30 secondes pour s'assurer que le serveur démarre correctement
+sleep 30
+
+# Créer le fichier de service systemd pour Caldera
+echo "[Unit]" > /etc/systemd/system/caldera.service
+echo "Description=Caldera C2 Service" >> /etc/systemd/system/caldera.service 
+echo "" >> /etc/systemd/system/caldera.service 
+echo "[Service]" >> /etc/systemd/system/caldera.service 
+echo "User=root" >> /etc/systemd/system/caldera.service 
+echo "WorkingDirectory=/root/caldera" >> /etc/systemd/system/caldera.service 
+echo "ExecStart=/usr/bin/python3 /root/caldera/server.py" >> /etc/systemd/system/caldera.service 
+echo "" >> /etc/systemd/system/caldera.service 
+echo "[Install]" >> /etc/systemd/system/caldera.service 
+echo "WantedBy=multi-user.target" >> /etc/systemd/system/caldera.service 
+
+# Recharger le démon systemd pour prendre en compte le nouveau service
+systemctl daemon-reload
+
+# Démarrer et activer le service Caldera au démarrage
+systemctl start caldera
+systemctl enable caldera
+
+# Extraire le mot de passe de l'agent et le stocker dans un fichier temporaire
+cat conf/local.yml | grep -oP '^\s+red:\s(?<Password>[\w\d_\-]+)' > /tmp/password

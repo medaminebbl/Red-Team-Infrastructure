@@ -1,0 +1,19 @@
+#cloud-config
+packages:
+  - git
+  - golang
+runcmd:
+  - sudo yum update
+  - echo "Task Initiated" > /tmp/init.log
+  - cd /home/ec2-user
+  - pwd >> /tmp/init.log
+  - sudo yum update
+  - sudo pip3 install boto3 >> /tmp/init.log
+  - echo "Installing Evilginx 2" >> /tmp/init.log
+  - git clone https://github.com/kgretzky/evilginx2.git >> /tmp/init.log
+  - cd evilginx2                                       
+  - sudo make 
+  - sudo cp bin/evilginx /usr/bin >> /tmp/init.log
+  - sudo mkdir /usr/share/evilginx/
+  - sudo cp -r phishlets /usr/share/evilginx/phishlets
+  - sudo cp -r templates /usr/share/evilginx
